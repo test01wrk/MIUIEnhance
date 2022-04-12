@@ -13,7 +13,16 @@ android {
         versionCode 1
         versionName "1.0"
     }
-
+    signingConfigs {
+        release {
+            if (System.getenv("KEYSTORE_PATH")) {
+                storeFile file(System.getenv("KEYSTORE_PATH"))
+                storePassword System.getenv("KEYSTORE_PASSWORD")
+                keyAlias System.getenv("KEYSTORE_KEY_ALIAS")
+                keyPassword System.getenv("KEYSTORE_KEY_PASSWORD")
+            }
+        }
+    }
     buildTypes {
         debug {
             minifyEnabled true
@@ -22,6 +31,9 @@ android {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (System.getenv("KEYSTORE_PATH")) {
+                signingConfig signingConfigs.release
+            }
         }
     }
     compileOptions {
