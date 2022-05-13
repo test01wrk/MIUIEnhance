@@ -12,14 +12,11 @@ class Hook : IXposedHookLoadPackage {
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam?) {
         // hook remote process only
-        if (
-            lpparam?.packageName == "com.miui.securitycenter" &&
-            lpparam.processName == "com.miui.securitycenter.remote"
-        ) {
+        if (lpparam?.packageName == "com.miui.securitycenter") {
             try {
                 KeywordRegex.initHook(lpparam)
                 XposedBridge.log("[${TAG}] process hooked: ${lpparam.processName}")
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 XposedBridge.log("[${TAG}] failed to hook: ${lpparam.processName}. ${e.message}")
             }
         }

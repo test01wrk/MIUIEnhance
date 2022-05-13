@@ -1,7 +1,9 @@
 package com.rdstory.miui.enhance.xposed
 
 import android.annotation.SuppressLint
+import android.content.DialogInterface
 import android.util.SparseArray
+import android.widget.EditText
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
@@ -14,11 +16,40 @@ object KeywordRegex {
 
     fun initHook(lpparam: XC_LoadPackage.LoadPackageParam) {
         // hook keyword judge method
-        XposedHelpers.findAndHookMethod(
-            "com.miui.antispam.policy.b.b", lpparam.classLoader,
-            "d", String::class.java, Int::class.java, Int::class.java,
-            judgeMethod
-        )
+        if (lpparam.processName == "com.miui.securitycenter.remote") {
+            XposedHelpers.findAndHookMethod(
+                "com.miui.antispam.policy.b.b", lpparam.classLoader,
+                "d", String::class.java, Int::class.java, Int::class.java,
+                judgeMethod
+            )
+        } else if (lpparam.processName == "com.miui.securitycenter") {
+            XposedHelpers.findAndHookMethod("com.miui.antispam.ui.activity.KeywordListActivity\$b", lpparam.classLoader,
+                "onClick", DialogInterface::class.java, Int::class.java,
+                keywordEditClickMethod
+            )
+        }
+    }
+
+    private val keywordEditClickMethod = object : XC_MethodHook() {
+        private var unHook: Unhook? = null
+        override fun beforeHookedMethod(param: MethodHookParam) {
+            val keyword = (XposedHelpers.getObjectField(param.thisObject, "a") as EditText)
+                .text.toString().trim()
+            unHook = XposedHelpers.findAndHookMethod(
+                String::class.java, "contains",
+                CharSequence::class.java,
+                object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        if (param.thisObject == keyword && (param.args[0] == "," || param.args[0] == "，")) {
+                            param.result = false // skip check comma
+                        }
+                    }
+                })
+        }
+        override fun afterHookedMethod(param: MethodHookParam) {
+            unHook?.unhook()
+            unHook = null
+        }
     }
 
     private val judgeMethod = object : XC_MethodHook() {
