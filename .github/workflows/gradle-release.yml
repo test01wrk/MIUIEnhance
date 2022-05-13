@@ -36,6 +36,7 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEYSTORE_KEY_ALIAS: ${{ secrets.KEYSTORE_KEY_ALIAS }}
           KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           chmod +x ./gradlew
           ./gradlew assembleRelease
@@ -47,6 +48,7 @@ jobs:
           fi
           ls -l "$apk_path"
           echo "::set-output name=apk_path::$apk_path"
+          echo "::set-output name=apk_name::$(basename $REPOSITORY)"
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -65,5 +67,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ steps.build_apk.outputs.apk_path }}
-          asset_name: MIUIEnhance_${{ github.ref_name }}.apk
+          asset_name: ${{ steps.build_apk.outputs.apk_name }}_${{ github.ref_name }}.apk
           asset_content_type: application/vnd.android.package-archive
