@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import android.content.DialogInterface
 import android.util.SparseArray
 import android.widget.EditText
+import com.rdstory.miui.enhance.xposed.Hook.Companion.SECURITY_CENTER_PROCESS_REMOTE
+import com.rdstory.miui.enhance.xposed.Hook.Companion.SECURITY_CENTER_PROCESS_UI
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
@@ -16,18 +18,23 @@ object KeywordRegex {
 
     fun initHook(lpparam: XC_LoadPackage.LoadPackageParam) {
         // hook keyword judge method
-        if (lpparam.processName == "com.miui.securitycenter.remote") {
-            XposedHelpers.findAndHookMethod(
-                "com.miui.antispam.policy.b.b", lpparam.classLoader,
-                "d", String::class.java, Int::class.java, Int::class.java,
-                judgeMethod
-            )
-        } else if (lpparam.processName == "com.miui.securitycenter") {
-            XposedHelpers.findAndHookMethod("com.miui.antispam.ui.activity.KeywordListActivity\$b", lpparam.classLoader,
-                "onClick", DialogInterface::class.java, Int::class.java,
-                keywordEditClickMethod
-            )
+        when (lpparam.processName) {
+            SECURITY_CENTER_PROCESS_REMOTE -> {
+                XposedHelpers.findAndHookMethod(
+                    "com.miui.antispam.policy.b.b", lpparam.classLoader,
+                    "d", String::class.java, Int::class.java, Int::class.java,
+                    judgeMethod
+                )
+            }
+            SECURITY_CENTER_PROCESS_UI -> {
+                XposedHelpers.findAndHookMethod("com.miui.antispam.ui.activity.KeywordListActivity\$b", lpparam.classLoader,
+                    "onClick", DialogInterface::class.java, Int::class.java,
+                    keywordEditClickMethod
+                )
+            }
+            else -> return
         }
+        XposedBridge.log("[${TAG}] process hooked: ${lpparam.processName}")
     }
 
     private val keywordEditClickMethod = object : XC_MethodHook() {

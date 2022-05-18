@@ -8,14 +8,21 @@ class Hook : IXposedHookLoadPackage {
     companion object {
         const val TAG_PREFIX = "MIUIEnhance"
         private const val TAG = "${TAG_PREFIX}.Hook"
+        const val SECURITY_CENTER_PKG = "com.miui.securitycenter"
+        const val SECURITY_CENTER_PROCESS_UI = SECURITY_CENTER_PKG
+        const val SECURITY_CENTER_PROCESS_REMOTE = "$SECURITY_CENTER_PKG.remote"
     }
 
-    override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam?) {
+    override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         // hook remote process only
-        if (lpparam?.packageName == "com.miui.securitycenter") {
+        if (lpparam.packageName == SECURITY_CENTER_PKG) {
             try {
                 KeywordRegex.initHook(lpparam)
-                XposedBridge.log("[${TAG}] process hooked: ${lpparam.processName}")
+            } catch (e: Throwable) {
+                XposedBridge.log("[${TAG}] failed to hook: ${lpparam.processName}. ${e.message}")
+            }
+            try {
+                EasyADB.initHook(lpparam)
             } catch (e: Throwable) {
                 XposedBridge.log("[${TAG}] failed to hook: ${lpparam.processName}. ${e.message}")
             }
