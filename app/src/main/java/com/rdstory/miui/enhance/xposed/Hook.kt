@@ -14,17 +14,17 @@ class Hook : IXposedHookLoadPackage {
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
-        // hook remote process only
         if (lpparam.packageName == SECURITY_CENTER_PKG) {
-            try {
-                KeywordRegex.initHook(lpparam)
-            } catch (e: Throwable) {
-                XposedBridge.log("[${TAG}] failed to hook: ${lpparam.processName}. ${e.message}")
-            }
-            try {
-                EasyADB.initHook(lpparam)
-            } catch (e: Throwable) {
-                XposedBridge.log("[${TAG}] failed to hook: ${lpparam.processName}. ${e.message}")
+            arrayOf(
+                KeywordRegex,
+                EasyADB,
+                EasyPerm
+            ).forEach {
+                try {
+                    it.initHook(lpparam)
+                } catch (e: Throwable) {
+                    XposedBridge.log("[${TAG}] failed to hook: ${lpparam.processName}. ${e.message}")
+                }
             }
         }
     }

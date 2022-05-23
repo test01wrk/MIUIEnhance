@@ -13,10 +13,10 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
 import java.util.regex.PatternSyntaxException
 
 @SuppressLint("LongLogTag")
-object KeywordRegex {
+object KeywordRegex : IHook {
     private const val TAG = "${Hook.TAG_PREFIX}.KeywordRegex"
 
-    fun initHook(lpparam: XC_LoadPackage.LoadPackageParam) {
+    override fun initHook(lpparam: XC_LoadPackage.LoadPackageParam) {
         // hook keyword judge method
         when (lpparam.processName) {
             SECURITY_CENTER_PROCESS_REMOTE -> {

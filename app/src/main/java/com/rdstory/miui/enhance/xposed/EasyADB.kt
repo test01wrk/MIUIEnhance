@@ -8,10 +8,10 @@ import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
-object EasyADB {
+object EasyADB : IHook {
     private const val TAG = "${Hook.TAG_PREFIX}.EasyADB"
 
-    fun initHook(lpparam: XC_LoadPackage.LoadPackageParam) {
+    override fun initHook(lpparam: XC_LoadPackage.LoadPackageParam) {
         if (lpparam.processName != Hook.SECURITY_CENTER_PROCESS_UI) return
         val adbInputApplyActivity = XposedHelpers.findClass(
             "com.miui.permcenter.install.AdbInputApplyActivity",
@@ -50,5 +50,6 @@ object EasyADB {
                 }
             }
         )
+        XposedBridge.log("[${TAG}] process hooked: ${lpparam.processName}")
     }
 }
