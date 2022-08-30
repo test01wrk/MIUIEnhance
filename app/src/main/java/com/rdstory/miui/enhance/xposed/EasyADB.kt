@@ -63,7 +63,8 @@ object EasyADB : IHook {
                                 }
                             }
                         )
-                    } catch (ignore: Throwable) {
+                    } catch (e: Throwable) {
+                        e.printStackTrace()
                     }
                     try {
                         XposedHelpers.findAndHookMethod(
@@ -77,33 +78,50 @@ object EasyADB : IHook {
                                     XposedBridge.log("[$TAG] adb USB install allowed")
                                 }
                             })
-                    } catch (ignore: Throwable) {
+                    } catch (e: Throwable) {
+                        e.printStackTrace()
                     }
                 }
             }
         )
-        XposedHelpers.findAndHookConstructor(
-            "com.miui.permcenter.install.AdbInstallVerifyActivity",
-            lpparam.classLoader,
-            object : XC_MethodHook() {
-                private var hooked = false
-                override fun afterHookedMethod(param: MethodHookParam) {
-                    if (hooked) return
-                    hooked = true
+        try {
+            XposedHelpers.findAndHookMethod(
+                "com.miui.permcenter.install.AdbInstallVerifyActivity",
+                lpparam.classLoader,
+                "onDestroy",
+                object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        XposedHelpers.callMethod(param.thisObject, "C")
+                    }
+                })
+        } catch (e: Throwable) {
+            e.printStackTrace()
+        }
+        try {
+            XposedHelpers.findAndHookConstructor(
+                "com.miui.permcenter.install.AdbInstallVerifyActivity",
+                lpparam.classLoader,
+                object : XC_MethodHook() {
+                    private var hooked = false
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        if (hooked) return
+                        hooked = true
 
-                    XposedHelpers.findAndHookMethod(
-                        param.thisObject::class.java,
-                        "onCreate",
-                        Bundle::class.java,
-                        object : XC_MethodHook() {
-                            override fun afterHookedMethod(param: MethodHookParam) {
-                                XposedHelpers.callMethod(param.thisObject, "yd")
-                                (param.thisObject as Activity).finish()
-                            }
-                        })
-                }
-            })
-
+                        XposedHelpers.findAndHookMethod(
+                            param.thisObject::class.java,
+                            "onCreate",
+                            Bundle::class.java,
+                            object : XC_MethodHook() {
+                                override fun afterHookedMethod(param: MethodHookParam) {
+                                    XposedHelpers.callMethod(param.thisObject, "yd")
+                                    (param.thisObject as Activity).finish()
+                                }
+                            })
+                    }
+                })
+        } catch (e: Throwable) {
+            e.printStackTrace()
+        }
 
         XposedBridge.log("[${TAG}] process hooked: ${lpparam.processName}")
     }
