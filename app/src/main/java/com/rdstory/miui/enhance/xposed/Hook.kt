@@ -14,17 +14,27 @@ class Hook : IXposedHookLoadPackage {
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
-        if (lpparam.packageName == SECURITY_CENTER_PKG) {
-            arrayOf(
+        XposedBridge.log("[$TAG] handleLoadPackage: ${lpparam.packageName}")
+        val hooks = when (lpparam.packageName) {
+            SECURITY_CENTER_PKG -> arrayOf(
                 KeywordRegex,
                 EasyADB,
-                EasyPerm
-            ).forEach {
-                try {
-                    it.initHook(lpparam)
-                } catch (e: Throwable) {
-                    XposedBridge.log("[${TAG}] failed to hook: ${lpparam.processName}. ${e.message}")
-                }
+                EasyPerm,
+            )
+            "com.android.camera", "com.android.settings" -> arrayOf(
+                CustomSettings,
+            )
+            else -> emptyArray()
+        }
+        initHook(hooks, lpparam)
+    }
+
+    private fun initHook(hooks: Array<out IHook>, lpparam: XC_LoadPackage.LoadPackageParam) {
+        hooks.forEach {
+            try {
+                it.initHook(lpparam)
+            } catch (e: Throwable) {
+                XposedBridge.log("[${TAG}] failed to hook: ${lpparam.processName}. ${e.message}")
             }
         }
     }

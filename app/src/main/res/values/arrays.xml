@@ -2,5 +2,7 @@
 <resources>
     <string-array name="hook_scope">
         <item>com.miui.securitycenter</item>
+        <item>com.android.camera</item>
+        <item>com.android.settings</item>
     </string-array>
 </resources>
