@@ -16,74 +16,65 @@ object EasyADB : IHook {
 
     override fun initHook(lpparam: XC_LoadPackage.LoadPackageParam) {
         if (lpparam.processName != Hook.SECURITY_CENTER_PROCESS_UI) return
+        val classHelper = ClassHelper(lpparam.classLoader)
+        val resetTimerHook = object : XC_MethodHook() {
+            override fun afterHookedMethod(param: MethodHookParam) {
+                val options = arrayListOf("_w").apply {
+                    addAll(('a'..'z').map { it.toString() })
+                }
+                val countVar = classHelper.findFieldNameMatchValue(
+                    param.thisObject, 5, options) ?: return
+                XposedHelpers.setIntField(param.thisObject, countVar, 1)
+            }
+        }
         XposedHelpers.findAndHookConstructor(
             "com.miui.permcenter.install.AdbInputApplyActivity",
             lpparam.classLoader,
-            object : XC_MethodHook() {
-                private var hooked = false
-                override fun afterHookedMethod(param: MethodHookParam) {
-                    if (hooked) return
-                    hooked = true
-                    val countVarList = arrayOf("e", "_w")
-                    val countVar = countVarList.find { v ->
-                        XposedHelpers.getIntField(param.thisObject, v) == 5
-                    } ?: return
-                    XposedHelpers.setIntField(param.thisObject, countVar, 1)
-                    XposedHelpers.findAndHookMethod(
-                        param.thisObject::class.java,
-                        "onClick", View::class.java,
-                        object : XC_MethodHook() {
-                            override fun afterHookedMethod(param: MethodHookParam) {
-                                XposedHelpers.setIntField(param.thisObject, countVar, 1)
-                            }
-                        }
-                    )
-                }
-            })
-
-        XposedHelpers.findAndHookConstructor(
-            "com.miui.permcenter.install.AdbInstallActivity",
-            lpparam.classLoader,
-            object : XC_MethodHook() {
-                private var hooked = false
-                override fun afterHookedMethod(param: MethodHookParam) {
-                    if (hooked) return
-                    hooked = true
-                    try {
-                        XposedHelpers.findAndHookMethod(
-                            param.thisObject::class.java,
-                            "z",
-                            object : XC_MethodHook() {
-                                override fun afterHookedMethod(param: MethodHookParam) {
-                                    val activity = param.thisObject as Activity
-                                    XposedHelpers.setIntField(activity, "c", -1)
-                                    activity.finish()
-                                    Toast.makeText(activity, "USB install allowed", Toast.LENGTH_LONG).show()
-                                    XposedBridge.log("[$TAG] adb USB install allowed")
-                                }
-                            }
-                        )
-                    } catch (e: Throwable) {
-                        e.printStackTrace()
-                    }
-                    try {
-                        XposedHelpers.findAndHookMethod(
-                            param.thisObject::class.java,
-                            "Je",
-                            String::class.java,
-                            object : XC_MethodHook() {
-                                override fun beforeHookedMethod(param: MethodHookParam) {
-                                    param.result = true
-                                    Toast.makeText(param.thisObject as Context, "USB install allowed", Toast.LENGTH_LONG).show()
-                                    XposedBridge.log("[$TAG] adb USB install allowed")
-                                }
-                            })
-                    } catch (e: Throwable) {
-                        e.printStackTrace()
-                    }
-                }
-            }
+            resetTimerHook
         )
+        XposedHelpers.findAndHookMethod(
+            "com.miui.permcenter.install.AdbInputApplyActivity",
+            lpparam.classLoader,
+            "onClick", View::class.java,
+            resetTimerHook
+        )
+
+        val adbInstallActivityClass = XposedHelpers.findClass(
+            "com.miui.permcenter.install.AdbInstallActivity",
+            lpparam.classLoader
+        )
+        try {
+            classHelper.findDialogMethod(adbInstallActivityClass)?.forEach { method ->
+                XposedBridge.hookMethod(method, object : XC_MethodHook() {
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        val activity = param.thisObject as Activity
+                        val flagVar = classHelper
+                            .findFieldNameMatchValue(param.thisObject, 0) ?: return
+                        XposedHelpers.setIntField(activity, flagVar, -1)
+                        activity.finish()
+                        Toast.makeText(activity, "USB install allowed", Toast.LENGTH_LONG).show()
+                        XposedBridge.log("[$TAG] adb USB install allowed")
+                    }
+                })
+            }
+        } catch (e: Throwable) {
+            e.printStackTrace()
+        }
+        try {
+            XposedHelpers.findAndHookMethod(
+                adbInstallActivityClass,
+                "Je",
+                String::class.java,
+                object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        param.result = true
+                        Toast.makeText(param.thisObject as Context, "USB install allowed", Toast.LENGTH_LONG).show()
+                        XposedBridge.log("[$TAG] adb USB install allowed")
+                    }
+                })
+        } catch (e: Throwable) {
+            e.printStackTrace()
+        }
         try {
             XposedHelpers.findAndHookMethod(
                 "com.miui.permcenter.install.AdbInstallVerifyActivity",
@@ -98,25 +89,15 @@ object EasyADB : IHook {
             e.printStackTrace()
         }
         try {
-            XposedHelpers.findAndHookConstructor(
+            XposedHelpers.findAndHookMethod(
                 "com.miui.permcenter.install.AdbInstallVerifyActivity",
                 lpparam.classLoader,
+                "onCreate",
+                Bundle::class.java,
                 object : XC_MethodHook() {
-                    private var hooked = false
                     override fun afterHookedMethod(param: MethodHookParam) {
-                        if (hooked) return
-                        hooked = true
-
-                        XposedHelpers.findAndHookMethod(
-                            param.thisObject::class.java,
-                            "onCreate",
-                            Bundle::class.java,
-                            object : XC_MethodHook() {
-                                override fun afterHookedMethod(param: MethodHookParam) {
-                                    XposedHelpers.callMethod(param.thisObject, "yd")
-                                    (param.thisObject as Activity).finish()
-                                }
-                            })
+                        XposedHelpers.callMethod(param.thisObject, "yd")
+                        (param.thisObject as Activity).finish()
                     }
                 })
         } catch (e: Throwable) {
