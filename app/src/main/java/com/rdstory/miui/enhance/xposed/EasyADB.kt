@@ -19,12 +19,8 @@ object EasyADB : IHook {
         val classHelper = ClassHelper(lpparam.classLoader)
         val resetTimerHook = object : XC_MethodHook() {
             override fun afterHookedMethod(param: MethodHookParam) {
-                val options = arrayListOf("_w").apply {
-                    addAll(('a'..'z').map { it.toString() })
-                }
-                val countVar = classHelper.findFieldNameMatchValue(
-                    param.thisObject, 5, options) ?: return
-                XposedHelpers.setIntField(param.thisObject, countVar, 1)
+                classHelper.findFirstFieldByValue(param.thisObject, 5)
+                    ?.setInt(param.thisObject, 1)
             }
         }
         XposedHelpers.findAndHookConstructor(
@@ -48,9 +44,8 @@ object EasyADB : IHook {
                 XposedBridge.hookMethod(method, object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
                         val activity = param.thisObject as Activity
-                        val flagVar = classHelper
-                            .findFieldNameMatchValue(param.thisObject, 0) ?: return
-                        XposedHelpers.setIntField(activity, flagVar, -1)
+                        classHelper.findFirstFieldByValue(param.thisObject, 0)
+                            ?.setInt(activity, -1) ?: return
                         activity.finish()
                         Toast.makeText(activity, "USB install allowed", Toast.LENGTH_LONG).show()
                         XposedBridge.log("[$TAG] adb USB install allowed")
