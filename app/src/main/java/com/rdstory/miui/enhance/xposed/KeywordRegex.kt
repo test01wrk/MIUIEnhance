@@ -10,6 +10,7 @@ import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
+import java.lang.reflect.Method
 import java.util.regex.PatternSyntaxException
 
 @SuppressLint("LongLogTag")
@@ -20,11 +21,9 @@ object KeywordRegex : IHook {
         // hook keyword judge method
         when (lpparam.processName) {
             SECURITY_CENTER_PROCESS_REMOTE -> {
-                XposedHelpers.findAndHookMethod(
-                    "com.miui.antispam.policy.b.b", lpparam.classLoader,
-                    "d", String::class.java, Int::class.java, Int::class.java,
-                    judgeMethod
-                )
+                findJudgeMethod(lpparam).let { XposedBridge.hookMethod(it, judgeMethod) } ?: let {
+                    XposedBridge.log("[${TAG}] judge method not found")
+                }
             }
             SECURITY_CENTER_PROCESS_UI -> {
                 XposedHelpers.findAndHookMethod("com.miui.antispam.ui.activity.KeywordListActivity\$b", lpparam.classLoader,
@@ -35,6 +34,21 @@ object KeywordRegex : IHook {
             else -> return
         }
         XposedBridge.log("[${TAG}] process hooked: ${lpparam.processName}")
+    }
+
+    private fun findJudgeMethod(lpparam: XC_LoadPackage.LoadPackageParam): Method? {
+        val policyClass = XposedHelpers.findClass(
+            "com.miui.antispam.policy.KeywordsBlackListPolicy",
+            lpparam.classLoader
+        )
+        val judgeClass = XposedHelpers.findField(policyClass, "mJudge")?.type
+        return XposedHelpers.findMethodsByExactParameters(
+            judgeClass,
+            String::class.java,
+            String::class.java, Int::class.java, Int::class.java
+        )?.firstOrNull()?.also {
+            XposedBridge.log("[${TAG}] found judge method: ${judgeClass?.name}@${it.name}")
+        }
     }
 
     private val keywordEditClickMethod = object : XC_MethodHook() {
